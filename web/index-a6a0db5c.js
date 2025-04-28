@@ -1,11 +1,4 @@
-UNPKG
-esp-web-tools
-Version: 
-10.1.0
-Web tools for ESP devices
-
-esp-web-tools / dist / web / index-BaUGegDD.js
-import{y as e,i as t,_ as o,r as i,x as l,t as n,w as s}from"./styles-B7oMzmOl.js";const a=s`
+import{d as e,i as t,_ as o,s as l,y as i,e as n,w as a}from"./connect-2f67c09e.js";const s=a`
   <svg
     version="1.1"
     id="Capa_1"
@@ -24,102 +17,103 @@ import{y as e,i as t,_ as o,r as i,x as l,t as n,w as s}from"./styles-B7oMzmOl.j
       />
     </g>
   </svg>
-`;let r=class extends i{render(){const e=(()=>{var e,t;const o=window.navigator.userAgent,i=(null===(t=null===(e=window.navigator)||void 0===e?void 0:e.userAgentData)||void 0===t?void 0:t.platform)||window.navigator.platform;return-1!==["macOS","Macintosh","MacIntel","MacPPC","Mac68K"].indexOf(i)?"Mac OS":-1!==["iPhone","iPad","iPod"].indexOf(i)?"iOS":-1!==["Win32","Win64","Windows","WinCE"].indexOf(i)?"Windows":/Android/.test(o)?"Android":/Linux/.test(i)?"Linux":null})();return l`
-      <ew-dialog open @closed=${this._handleClose}>
-        <div slot="headline">No port selected</div>
-        <div slot="content">
-          <div>
-            If you didn't select a port because you didn't see your device
-            listed, try the following steps:
-          </div>
-          <ol>
-            <li>
-              Make sure that the device is connected to this computer (the one
-              that runs the browser that shows this website)
-            </li>
-            <li>
-              Most devices have a tiny light when it is powered on. If yours has
-              one, make sure it is on.
-            </li>
-            <li>
-              Make sure that the USB cable you use can be used for data and is
-              not a power-only cable.
-            </li>
-            ${"Linux"===e?l`
-                  <li>
-                    If you are using a Linux flavor, make sure that your user is
-                    part of the <code>dialout</code> group so it has permission
-                    to access the device.
-                    <code class="block"
-                      >sudo usermod -a -G dialout YourUserName</code
-                    >
-                    You may need to log out & back in or reboot to activate the
-                    new group access.
-                  </li>
-                `:""}
-            <li>
-              Make sure you have the right drivers installed. Below are the
-              drivers for common chips used in ESP devices:
-              <ul>
-                <li>
-                  CP2102 drivers:
-                  <a
-                    href="https://www.silabs.com/developers/usb-to-uart-bridge-vcp-drivers"
-                    target="_blank"
-                    rel="noopener"
-                    >Windows & Mac</a
-                  >
-                </li>
-                <li>
-                  CH342, CH343, CH9102 drivers:
-                  <a
-                    href="https://www.wch.cn/downloads/CH343SER_ZIP.html"
-                    target="_blank"
-                    rel="noopener"
-                    >Windows</a
-                  >,
-                  <a
-                    href="https://www.wch.cn/downloads/CH34XSER_MAC_ZIP.html"
-                    target="_blank"
-                    rel="noopener"
-                    >Mac</a
-                  >
-                  <br />
-                  (download via blue button with ${a} icon)
-                </li>
-                <li>
-                  CH340, CH341 drivers:
-                  <a
-                    href="https://www.wch.cn/downloads/CH341SER_ZIP.html"
-                    target="_blank"
-                    rel="noopener"
-                    >Windows</a
-                  >,
-                  <a
-                    href="https://www.wch.cn/downloads/CH341SER_MAC_ZIP.html"
-                    target="_blank"
-                    rel="noopener"
-                    >Mac</a
-                  >
-                  <br />
-                  (download via blue button with ${a} icon)
-                </li>
-              </ul>
-            </li>
-          </ol>
+`;let r=class extends l{render(){return i`
+      <ewt-dialog
+        open
+        heading="No port selected"
+        scrimClickAction
+        @closed=${this._handleClose}
+      >
+        <div>
+          If you didn't select a port because you didn't see your device listed,
+          try the following steps:
         </div>
-        <div slot="actions">
-          ${this.doTryAgain?l`
-                <ew-text-button @click=${this.close}>Cancel</ew-text-button>
-                <ew-text-button @click=${this.tryAgain}>
-                  Try Again
-                </ew-text-button>
-              `:l`
-                <ew-text-button @click=${this.close}>Close</ew-text-button>
-              `}
-        </div>
-      </ew-dialog>
-    `}tryAgain(){var e;this.close(),null===(e=this.doTryAgain)||void 0===e||e.call(this)}close(){this.shadowRoot.querySelector("ew-dialog").close()}async _handleClose(){this.parentNode.removeChild(this)}};r.styles=[e,t`
+        <ol>
+          <li>
+            Make sure that the device is connected to this computer (the one
+            that runs the browser that shows this website)
+          </li>
+          <li>
+            Most devices have a tiny light when it is powered on. If yours has
+            one, make sure it is on.
+          </li>
+          <li>
+            Make sure that the USB cable you use can be used for data and is not
+            a power-only cable.
+          </li>
+          <li>
+            Make sure you have the right drivers installed. Below are the
+            drivers for common chips used in ESP devices:
+            <ul>
+              <li>
+                CP2102 drivers:
+                <a
+                  href="https://www.silabs.com/developers/usb-to-uart-bridge-vcp-drivers"
+                  target="_blank"
+                  rel="noopener"
+                  >Windows & Mac</a
+                >
+              </li>
+              <li>
+                CH342, CH343, CH9102 drivers:
+                <a
+                  href="https://www.wch.cn/downloads/CH343SER_ZIP.html"
+                  target="_blank"
+                  rel="noopener"
+                  >Windows</a
+                >,
+                <a
+                  href="https://www.wch.cn/downloads/CH34XSER_MAC_ZIP.html"
+                  target="_blank"
+                  rel="noopener"
+                  >Mac</a
+                >
+                <br />
+                (download via blue button with ${s} icon)
+              </li>
+              <li>
+                CH340, CH341 drivers:
+                <a
+                  href="https://www.wch.cn/downloads/CH341SER_ZIP.html"
+                  target="_blank"
+                  rel="noopener"
+                  >Windows</a
+                >,
+                <a
+                  href="https://www.wch.cn/downloads/CH341SER_MAC_ZIP.html"
+                  target="_blank"
+                  rel="noopener"
+                  >Mac</a
+                >
+                <br />
+                (download via blue button with ${s} icon)
+              </li>
+            </ul>
+          </li>
+        </ol>
+        ${this.doTryAgain?i`
+              <ewt-button
+                slot="primaryAction"
+                dialogAction="close"
+                label="Try Again"
+                @click=${this.doTryAgain}
+              ></ewt-button>
+
+              <ewt-button
+                no-attention
+                slot="secondaryAction"
+                dialogAction="close"
+                label="Cancel"
+              ></ewt-button>
+            `:i`
+              <ewt-button
+                slot="primaryAction"
+                dialogAction="close"
+                label="Close"
+              ></ewt-button>
+            `}
+      </ewt-dialog>
+    `}async _handleClose(){this.parentNode.removeChild(this)}};r.styles=[e,t`
       li + li,
       li > ul {
         margin-top: 8px;
@@ -129,8 +123,4 @@ import{y as e,i as t,_ as o,r as i,x as l,t as n,w as s}from"./styles-B7oMzmOl.j
         margin-bottom: 0;
         padding-left: 1.5em;
       }
-      li code.block {
-        display: block;
-        margin: 0.5em 0;
-      }
-    `],r=o([n("ewt-no-port-picked-dialog")],r);const d=async e=>{const t=document.createElement("ewt-no-port-picked-dialog");return t.doTryAgain=e,document.body.append(t),!0};export{d as openNoPortPickedDialog};
+    `],r=o([n("ewt-no-port-picked-dialog")],r);const c=async e=>{const t=document.createElement("ewt-no-port-picked-dialog");return t.doTryAgain=e,document.body.append(t),!0};export{c as openNoPortPickedDialog};
