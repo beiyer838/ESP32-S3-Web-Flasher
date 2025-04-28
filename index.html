@@ -170,7 +170,65 @@
             }
         });
 
-        // (Keep the rest of your existing JavaScript)
+        // Handle file selection
+        fileInput.addEventListener('change', (e) => {
+            file = e.target.files[0];
+            if (file) {
+                statusDiv.className = 'info';
+                statusDiv.textContent += `\nSelected file: ${file.name} (${formatFileSize(file.size)})`;
+            }
+        });
+        
+        // Flash the firmware
+        flashButton.addEventListener('click', async () => {
+            if (!file || !esploader) return;
+            
+            try {
+                flashButton.disabled = true;
+                progressContainer.style.display = 'block';
+                
+                statusDiv.className = 'info';
+                statusDiv.textContent += '\nStarting flash process...';
+                
+                const fileBuffer = await file.arrayBuffer();
+                const options = {
+                    fileArray: [new Uint8Array(fileBuffer)],
+                    flashSize: flashSize.value,
+                    flashMode: flashMode.value,
+                    flashFreq: flashFreq.value,
+                    eraseAll: true,
+                    compress: file.name.endsWith('.gz'),
+                    reportProgress: (progress) => {
+                        const percent = Math.round(progress * 100);
+                        progressBar.style.width = `${percent}%`;
+                        progressBar.textContent = `${percent}%`;
+                    }
+                };
+                
+                await esploader.writeFlash(options);
+                
+                statusDiv.className = 'success';
+                statusDiv.textContent += '\nFlash complete! You can now reset your device.';
+                
+            } catch (error) {
+                showError(error.message);
+            } finally {
+                flashButton.disabled = false;
+                if (port) await port.close();
+            }
+        });
+        
+        function showError(message) {
+            statusDiv.className = 'error';
+            statusDiv.textContent += '\nERROR: ' + message;
+            console.error(message);
+        }
+        
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' bytes';
+            else if (bytes < 1048576) return (bytes / 1024).toFixed(2) + ' KB';
+            else return (bytes / 1048576).toFixed(2) + ' MB';
+        }
     </script>
 </body>
 </html>
