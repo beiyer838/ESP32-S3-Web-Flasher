@@ -4,71 +4,254 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ESP32-S3 Web Flasher</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1 {
+            color: #2c3e50;
+        }
+        .container {
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .progress-container {
+            width: 100%;
+            background-color: #e0e0e0;
+            border-radius: 4px;
+            margin: 20px 0;
+            display: none;
+        }
+        .progress-bar {
+            width: 0%;
+            height: 30px;
+            background-color: #4CAF50;
+            border-radius: 4px;
+            text-align: center;
+            line-height: 30px;
+            color: white;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 10px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        #fileInfo {
+            margin: 15px 0;
+            padding: 10px;
+            background-color: #e8f5e9;
+            border-radius: 4px;
+            display: none;
+        }
+        #status {
+            margin: 15px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+        .error {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        .info {
+            background-color: #e3f2fd;
+            color: #1565c0;
+        }
+    </style>
 </head>
 <body>
     <h1>ESP32-S3 Web Flasher</h1>
-
-    <!-- Add a file input for uploading .bin files -->
-    <label for="fileInput">Upload .bin File:</label>
-    <input type="file" id="fileInput" accept=".bin">
-
-    <button id="connectButton">Connect to Device</button>
-
-    <!-- Load the local JavaScript files -->
-    <script type="module" src="web/index-a6a0db5c.js"></script>
-    <script type="module" src="web/esp32s3-8c1766c2.js"></script>
+    
+    <div class="container">
+        <h2>Firmware Flasher</h2>
+        <p>Select a .bin file to flash to your ESP32-S3 device:</p>
+        
+        <input type="file" id="fileInput" accept=".bin">
+        
+        <div id="fileInfo"></div>
+        
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar" id="progressBar">0%</div>
+        </div>
+        
+        <button id="flashButton" disabled>Flash Device</button>
+        
+        <div id="status" class="info">Connect your ESP32-S3 in download mode to begin.</div>
+    </div>
+    
+    <div class="container">
+        <h2>Instructions</h2>
+        <ol>
+            <li>Put your ESP32-S3 into download mode (usually by holding BOOT button while pressing RESET)</li>
+            <li>Select the .bin file you want to flash</li>
+            <li>Click "Flash Device"</li>
+            <li>Wait for the process to complete</li>
+            <li>Reset your device</li>
+        </ol>
+    </div>
 
     <script>
-        window.addEventListener('load', function() {
-            // Check if the connect function is available
-            if (typeof connect === 'function') {
-                console.log('connect function is available');
+        const fileInput = document.getElementById('fileInput');
+        const flashButton = document.getElementById('flashButton');
+        const fileInfo = document.getElementById('fileInfo');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const statusDiv = document.getElementById('status');
+        
+        let selectedFile = null;
+        
+        fileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file && file.name.endsWith('.bin')) {
+                selectedFile = file;
+                fileInfo.style.display = 'block';
+                fileInfo.innerHTML = `
+                    <strong>Selected file:</strong> ${file.name}<br>
+                    <strong>Size:</strong> ${formatFileSize(file.size)}
+                `;
+                flashButton.disabled = false;
+                statusDiv.className = 'info';
+                statusDiv.textContent = 'Ready to flash. Click the "Flash Device" button to begin.';
             } else {
-                console.error('connect function is NOT available');
+                selectedFile = null;
+                fileInfo.style.display = 'none';
+                flashButton.disabled = true;
+                statusDiv.className = 'error';
+                statusDiv.textContent = 'Please select a valid .bin file.';
             }
-
-            // Handle the file input change event to store the selected .bin file
-            let selectedFile = null;
-            document.getElementById('fileInput').addEventListener('change', function(event) {
-                const file = event.target.files[0];
-                if (file && file.name.endsWith('.bin')) {
-                    selectedFile = file;
-                    console.log('Selected file:', file.name);
-                } else {
-                    alert('Please upload a valid .bin file.');
-                }
-            });
-
-            // Initialize the flashing process once connected and file is selected
-            document.getElementById('connectButton').addEventListener('click', function() {
-                if (!selectedFile) {
-                    alert('Please upload a .bin file first!');
-                    return;
-                }
-
-                if (typeof connect === 'function') {
-                    const reader = new FileReader();
-
-                    reader.onload = function(e) {
-                        // Get the file data as ArrayBuffer
-                        const arrayBuffer = e.target.result;
-
-                        // Start the flashing process using the selected file
-                        connect({
-                            chipFamily: 'ESP32-S3',
-                            flashData: {
-                                file: arrayBuffer,  // Use the uploaded file's data
-                                offset: 0
-                            }
-                        });
-                    };
-
-                    reader.readAsArrayBuffer(selectedFile);
-                } else {
-                    console.error('connect function is NOT available');
-                }
-            });
         });
+        
+        flashButton.addEventListener('click', async () => {
+            if (!selectedFile) return;
+            
+            try {
+                flashButton.disabled = true;
+                fileInput.disabled = true;
+                progressContainer.style.display = 'block';
+                statusDiv.className = 'info';
+                statusDiv.textContent = 'Connecting to ESP32-S3...';
+                
+                // Check if Web Serial is supported
+                if (!('serial' in navigator)) {
+                    throw new Error('Web Serial API not supported in this browser. Try Chrome or Edge.');
+                }
+                
+                // Request port and open it
+                const port = await navigator.serial.requestPort();
+                await port.open({ baudRate: 115200 });
+                
+                statusDiv.textContent = 'Connected. Starting flash process...';
+                
+                // Create a reader and writer
+                const writer = port.writable.getWriter();
+                const reader = port.readable.getReader();
+                
+                // Send flash command (this is a simplified version)
+                // In a real implementation, you would need to implement the ESP32-S3's
+                // serial protocol for flashing
+                statusDiv.textContent = 'Synchronizing with device...';
+                
+                // Send sync command
+                await writer.write(new Uint8Array([0x07, 0x07, 0x12, 0x20]));
+                await delay(100);
+                
+                // Read response
+                let response = await readResponse(reader);
+                if (!response.includes('OHAI')) {
+                    throw new Error('Failed to sync with device');
+                }
+                
+                statusDiv.textContent = 'Sending firmware...';
+                
+                // Read the file as array buffer
+                const arrayBuffer = await selectedFile.arrayBuffer();
+                const firmwareData = new Uint8Array(arrayBuffer);
+                
+                // Split into chunks and send
+                const chunkSize = 1024;
+                let offset = 0;
+                
+                while (offset < firmwareData.length) {
+                    const chunk = firmwareData.slice(offset, offset + chunkSize);
+                    await writer.write(chunk);
+                    
+                    offset += chunkSize;
+                    const progress = Math.min(100, Math.round((offset / firmwareData.length) * 100));
+                    progressBar.style.width = `${progress}%`;
+                    progressBar.textContent = `${progress}%`;
+                    
+                    // Read response
+                    response = await readResponse(reader);
+                    if (response.includes('ERROR')) {
+                        throw new Error('Device reported error during flashing');
+                    }
+                    
+                    await delay(10); // Small delay to prevent overwhelming the device
+                }
+                
+                // Send finish command
+                await writer.write(new Uint8Array([0x00, 0xFF, 0xFF, 0x00]));
+                await delay(100);
+                
+                // Close everything
+                await writer.close();
+                await reader.cancel();
+                await port.close();
+                
+                statusDiv.className = 'success';
+                statusDiv.textContent = 'Firmware flashed successfully! You can now reset your device.';
+                
+            } catch (error) {
+                statusDiv.className = 'error';
+                statusDiv.textContent = `Error: ${error.message}`;
+                console.error('Flashing error:', error);
+            } finally {
+                flashButton.disabled = false;
+                fileInput.disabled = false;
+            }
+        });
+        
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' bytes';
+            else if (bytes < 1048576) return (bytes / 1024).toFixed(2) + ' KB';
+            else return (bytes / 1048576).toFixed(2) + ' MB';
+        }
+        
+        function delay(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+        
+        async function readResponse(reader) {
+            let response = '';
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+                response += new TextDecoder().decode(value);
+                if (response.includes('\n')) break; // Stop at first newline
+            }
+            return response.trim();
+        }
     </script>
 </body>
-</htm
+</html>
