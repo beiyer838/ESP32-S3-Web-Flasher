@@ -12,9 +12,6 @@
             padding: 20px;
             line-height: 1.6;
         }
-        h1 {
-            color: #2c3e50;
-        }
         .container {
             background-color: #f9f9f9;
             border-radius: 8px;
@@ -54,30 +51,17 @@
             background-color: #cccccc;
             cursor: not-allowed;
         }
-        #fileInfo {
-            margin: 15px 0;
-            padding: 10px;
-            background-color: #e8f5e9;
-            border-radius: 4px;
-            display: none;
-        }
         #status {
             margin: 15px 0;
             padding: 10px;
             border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: monospace;
         }
-        .success {
-            background-color: #e8f5e9;
-            color: #2e7d32;
-        }
-        .error {
-            background-color: #ffebee;
-            color: #c62828;
-        }
-        .info {
-            background-color: #e3f2fd;
-            color: #1565c0;
-        }
+        .success { background-color: #e8f5e9; color: #2e7d32; }
+        .error { background-color: #ffebee; color: #c62828; }
+        .info { background-color: #e3f2fd; color: #1565c0; }
+        .log { background-color: #f5f5f5; color: #333; }
     </style>
 </head>
 <body>
@@ -85,172 +69,173 @@
     
     <div class="container">
         <h2>Firmware Flasher</h2>
-        <p>Select a .bin file to flash to your ESP32-S3 device:</p>
         
-        <input type="file" id="fileInput" accept=".bin">
-        
-        <div id="fileInfo"></div>
+        <div>
+            <input type="file" id="fileInput" accept=".bin,.bin.gz">
+            <button id="connectButton">Connect ESP32-S3</button>
+            <button id="flashButton" disabled>Flash Firmware</button>
+        </div>
         
         <div class="progress-container" id="progressContainer">
             <div class="progress-bar" id="progressBar">0%</div>
         </div>
         
-        <button id="flashButton" disabled>Flash Device</button>
+        <h3>Flash Options</h3>
+        <div>
+            <label>Flash Mode:
+                <select id="flashMode">
+                    <option value="qio">QIO</option>
+                    <option value="qout">QOUT</option>
+                    <option value="dio">DIO</option>
+                    <option value="dout">DOUT</option>
+                    <option value="opi" selected>OPI</option>
+                </select>
+            </label>
+            
+            <label>Flash Frequency:
+                <select id="flashFreq">
+                    <option value="80m">80 MHz</option>
+                    <option value="40m">40 MHz</option>
+                    <option value="26m">26 MHz</option>
+                    <option value="20m">20 MHz</option>
+                </select>
+            </label>
+            
+            <label>Flash Size:
+                <select id="flashSize">
+                    <option value="1MB">1MB</option>
+                    <option value="2MB">2MB</option>
+                    <option value="4MB" selected>4MB</option>
+                    <option value="8MB">8MB</option>
+                    <option value="16MB">16MB</option>
+                </select>
+            </label>
+        </div>
         
-        <div id="status" class="info">Connect your ESP32-S3 in download mode to begin.</div>
-    </div>
-    
-    <div class="container">
-        <h2>Instructions</h2>
-        <ol>
-            <li>Put your ESP32-S3 into download mode (usually by holding BOOT button while pressing RESET)</li>
-            <li>Select the .bin file you want to flash</li>
-            <li>Click "Flash Device"</li>
-            <li>Wait for the process to complete</li>
-            <li>Reset your device</li>
-        </ol>
+        <div id="status" class="info">
+            Connect your ESP32-S3 in download mode (hold BOOT, press RESET, release BOOT)
+        </div>
     </div>
 
+    <!-- Load esptool-js from CDN -->
+    <script src="https://unpkg.com/esptool-js@latest/dist/esptool.js"></script>
+    
     <script>
         const fileInput = document.getElementById('fileInput');
+        const connectButton = document.getElementById('connectButton');
         const flashButton = document.getElementById('flashButton');
-        const fileInfo = document.getElementById('fileInfo');
         const progressContainer = document.getElementById('progressContainer');
         const progressBar = document.getElementById('progressBar');
         const statusDiv = document.getElementById('status');
         
-        let selectedFile = null;
+        const flashMode = document.getElementById('flashMode');
+        const flashFreq = document.getElementById('flashFreq');
+        const flashSize = document.getElementById('flashSize');
         
-        fileInput.addEventListener('change', (event) => {
-            const file = event.target.files[0];
-            if (file && file.name.endsWith('.bin')) {
-                selectedFile = file;
-                fileInfo.style.display = 'block';
-                fileInfo.innerHTML = `
-                    <strong>Selected file:</strong> ${file.name}<br>
-                    <strong>Size:</strong> ${formatFileSize(file.size)}
-                `;
-                flashButton.disabled = false;
+        let port = null;
+        let file = null;
+        let esploader = null;
+        
+        // Connect to ESP32-S3
+        connectButton.addEventListener('click', async () => {
+            if (!navigator.serial) {
+                showError('Web Serial API not supported. Use Chrome/Edge 89+ or Firefox 101+');
+                return;
+            }
+            
+            try {
                 statusDiv.className = 'info';
-                statusDiv.textContent = 'Ready to flash. Click the "Flash Device" button to begin.';
-            } else {
-                selectedFile = null;
-                fileInfo.style.display = 'none';
-                flashButton.disabled = true;
-                statusDiv.className = 'error';
-                statusDiv.textContent = 'Please select a valid .bin file.';
+                statusDiv.textContent = 'Requesting serial port...';
+                
+                port = await navigator.serial.requestPort();
+                await port.open({ baudRate: 115200 });
+                
+                statusDiv.textContent += '\nPort opened. Connecting to ESP32-S3...';
+                
+                // Initialize esptool-js
+                esploader = new esptool.ESPLoader(port, {
+                    debug: true,
+                    logFunction: (message) => {
+                        statusDiv.textContent += '\n' + message;
+                        statusDiv.scrollTop = statusDiv.scrollHeight;
+                    }
+                });
+                
+                await esploader.connect();
+                
+                const chip = await esploader.mainArgs.chip;
+                const mac = await esploader.mainArgs.mac;
+                
+                statusDiv.className = 'success';
+                statusDiv.textContent += `\nConnected to ${chip} (MAC: ${mac})`;
+                
+                flashButton.disabled = false;
+                connectButton.disabled = true;
+                
+            } catch (error) {
+                showError(error.message);
+                if (port) await port.close();
             }
         });
         
+        // Handle file selection
+        fileInput.addEventListener('change', (e) => {
+            file = e.target.files[0];
+            if (file) {
+                statusDiv.className = 'info';
+                statusDiv.textContent += `\nSelected file: ${file.name} (${formatFileSize(file.size)})`;
+            }
+        });
+        
+        // Flash the firmware
         flashButton.addEventListener('click', async () => {
-            if (!selectedFile) return;
+            if (!file || !esploader) return;
             
             try {
                 flashButton.disabled = true;
-                fileInput.disabled = true;
                 progressContainer.style.display = 'block';
+                
                 statusDiv.className = 'info';
-                statusDiv.textContent = 'Connecting to ESP32-S3...';
+                statusDiv.textContent += '\nStarting flash process...';
                 
-                // Check if Web Serial is supported
-                if (!('serial' in navigator)) {
-                    throw new Error('Web Serial API not supported in this browser. Try Chrome or Edge.');
-                }
-                
-                // Request port and open it
-                const port = await navigator.serial.requestPort();
-                await port.open({ baudRate: 115200 });
-                
-                statusDiv.textContent = 'Connected. Starting flash process...';
-                
-                // Create a reader and writer
-                const writer = port.writable.getWriter();
-                const reader = port.readable.getReader();
-                
-                // Send flash command (this is a simplified version)
-                // In a real implementation, you would need to implement the ESP32-S3's
-                // serial protocol for flashing
-                statusDiv.textContent = 'Synchronizing with device...';
-                
-                // Send sync command
-                await writer.write(new Uint8Array([0x07, 0x07, 0x12, 0x20]));
-                await delay(100);
-                
-                // Read response
-                let response = await readResponse(reader);
-                if (!response.includes('OHAI')) {
-                    throw new Error('Failed to sync with device');
-                }
-                
-                statusDiv.textContent = 'Sending firmware...';
-                
-                // Read the file as array buffer
-                const arrayBuffer = await selectedFile.arrayBuffer();
-                const firmwareData = new Uint8Array(arrayBuffer);
-                
-                // Split into chunks and send
-                const chunkSize = 1024;
-                let offset = 0;
-                
-                while (offset < firmwareData.length) {
-                    const chunk = firmwareData.slice(offset, offset + chunkSize);
-                    await writer.write(chunk);
-                    
-                    offset += chunkSize;
-                    const progress = Math.min(100, Math.round((offset / firmwareData.length) * 100));
-                    progressBar.style.width = `${progress}%`;
-                    progressBar.textContent = `${progress}%`;
-                    
-                    // Read response
-                    response = await readResponse(reader);
-                    if (response.includes('ERROR')) {
-                        throw new Error('Device reported error during flashing');
+                const fileBuffer = await file.arrayBuffer();
+                const options = {
+                    fileArray: [new Uint8Array(fileBuffer)],
+                    flashSize: flashSize.value,
+                    flashMode: flashMode.value,
+                    flashFreq: flashFreq.value,
+                    eraseAll: true,
+                    compress: file.name.endsWith('.gz'),
+                    reportProgress: (progress) => {
+                        const percent = Math.round(progress * 100);
+                        progressBar.style.width = `${percent}%`;
+                        progressBar.textContent = `${percent}%`;
                     }
-                    
-                    await delay(10); // Small delay to prevent overwhelming the device
-                }
+                };
                 
-                // Send finish command
-                await writer.write(new Uint8Array([0x00, 0xFF, 0xFF, 0x00]));
-                await delay(100);
-                
-                // Close everything
-                await writer.close();
-                await reader.cancel();
-                await port.close();
+                await esploader.writeFlash(options);
                 
                 statusDiv.className = 'success';
-                statusDiv.textContent = 'Firmware flashed successfully! You can now reset your device.';
+                statusDiv.textContent += '\nFlash complete! You can now reset your device.';
                 
             } catch (error) {
-                statusDiv.className = 'error';
-                statusDiv.textContent = `Error: ${error.message}`;
-                console.error('Flashing error:', error);
+                showError(error.message);
             } finally {
                 flashButton.disabled = false;
-                fileInput.disabled = false;
+                if (port) await port.close();
             }
         });
+        
+        function showError(message) {
+            statusDiv.className = 'error';
+            statusDiv.textContent += '\nERROR: ' + message;
+            console.error(message);
+        }
         
         function formatFileSize(bytes) {
             if (bytes < 1024) return bytes + ' bytes';
             else if (bytes < 1048576) return (bytes / 1024).toFixed(2) + ' KB';
             else return (bytes / 1048576).toFixed(2) + ' MB';
-        }
-        
-        function delay(ms) {
-            return new Promise(resolve => setTimeout(resolve, ms));
-        }
-        
-        async function readResponse(reader) {
-            let response = '';
-            while (true) {
-                const { value, done } = await reader.read();
-                if (done) break;
-                response += new TextDecoder().decode(value);
-                if (response.includes('\n')) break; // Stop at first newline
-            }
-            return response.trim();
         }
     </script>
 </body>
