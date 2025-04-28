@@ -7,25 +7,68 @@
 </head>
 <body>
     <h1>ESP32-S3 Web Flasher</h1>
+
+    <!-- Add a file input for uploading .bin files -->
+    <label for="fileInput">Upload .bin File:</label>
+    <input type="file" id="fileInput" accept=".bin">
+
     <button id="connectButton">Connect to Device</button>
 
-    <!-- Directly linking to the necessary scripts from unpkg CDN -->
-    <script type="module" src="https://unpkg.com/esp-web-tools@9.1.0/files/dist/web/index-a6a0db5c.js"></script>
-    <script type="module" src="https://unpkg.com/esp-web-tools@9.1.0/files/dist/web/connect-2f67c09e.js"></script>
-    <script type="module" src="https://unpkg.com/esp-web-tools@9.1.0/files/dist/web/esp32s3-8c1766c2.js"></script>
+    <!-- Load the local JavaScript files -->
+    <script type="module" src="web/index-a6a0db5c.js"></script>
+    <script type="module" src="web/esp32s3-8c1766c2.js"></script>
 
     <script>
-        // Initialize the flashing process once connected
-        document.getElementById('connectButton').addEventListener('click', function() {
-            connect({
-                chipFamily: 'ESP32-S3',
-                flashData: {
-                    // Path to the .bin file
-                    file: 'firmware.bin',
-                    offset: 0
+        window.addEventListener('load', function() {
+            // Check if the connect function is available
+            if (typeof connect === 'function') {
+                console.log('connect function is available');
+            } else {
+                console.error('connect function is NOT available');
+            }
+
+            // Handle the file input change event to store the selected .bin file
+            let selectedFile = null;
+            document.getElementById('fileInput').addEventListener('change', function(event) {
+                const file = event.target.files[0];
+                if (file && file.name.endsWith('.bin')) {
+                    selectedFile = file;
+                    console.log('Selected file:', file.name);
+                } else {
+                    alert('Please upload a valid .bin file.');
+                }
+            });
+
+            // Initialize the flashing process once connected and file is selected
+            document.getElementById('connectButton').addEventListener('click', function() {
+                if (!selectedFile) {
+                    alert('Please upload a .bin file first!');
+                    return;
+                }
+
+                if (typeof connect === 'function') {
+                    const reader = new FileReader();
+
+                    reader.onload = function(e) {
+                        // Get the file data as ArrayBuffer
+                        const arrayBuffer = e.target.result;
+
+                        // Start the flashing process using the selected file
+                        connect({
+                            chipFamily: 'ESP32-S3',
+                            flashData: {
+                                file: arrayBuffer,  // Use the uploaded file's data
+                                offset: 0
+                            }
+                        });
+                    };
+
+                    reader.readAsArrayBuffer(selectedFile);
+                } else {
+                    console.error('connect function is NOT available');
                 }
             });
         });
     </script>
 </body>
-</html>
+</htm
