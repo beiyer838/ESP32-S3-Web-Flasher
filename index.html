@@ -5,138 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ESP32-S3 Web Flasher</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            line-height: 1.6;
-        }
-        .container {
-            background-color: #f9f9f9;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 20px;
-        }
-        .progress-container {
-            width: 100%;
-            background-color: #e0e0e0;
-            border-radius: 4px;
-            margin: 20px 0;
-            display: none;
-        }
-        .progress-bar {
-            width: 0%;
-            height: 30px;
-            background-color: #4CAF50;
-            border-radius: 4px;
-            text-align: center;
-            line-height: 30px;
-            color: white;
-        }
-        button {
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            text-align: center;
-            text-decoration: none;
-            display: inline-block;
-            font-size: 16px;
-            margin: 10px 2px;
-            cursor: pointer;
-            border-radius: 4px;
-        }
-        button:disabled {
-            background-color: #cccccc;
-            cursor: not-allowed;
-        }
-        #status {
-            margin: 15px 0;
-            padding: 10px;
-            border-radius: 4px;
-            white-space: pre-wrap;
-            font-family: monospace;
-        }
-        .success { background-color: #e8f5e9; color: #2e7d32; }
-        .error { background-color: #ffebee; color: #c62828; }
-        .info { background-color: #e3f2fd; color: #1565c0; }
-        .log { background-color: #f5f5f5; color: #333; }
+        /* (Keep your existing styles) */
     </style>
 </head>
 <body>
-    <h1>ESP32-S3 Web Flasher</h1>
-    
-    <div class="container">
-        <h2>Firmware Flasher</h2>
-        
-        <div>
-            <input type="file" id="fileInput" accept=".bin,.bin.gz">
-            <button id="connectButton">Connect ESP32-S3</button>
-            <button id="flashButton" disabled>Flash Firmware</button>
-        </div>
-        
-        <div class="progress-container" id="progressContainer">
-            <div class="progress-bar" id="progressBar">0%</div>
-        </div>
-        
-        <h3>Flash Options</h3>
-        <div>
-            <label>Flash Mode:
-                <select id="flashMode">
-                    <option value="qio">QIO</option>
-                    <option value="qout">QOUT</option>
-                    <option value="dio">DIO</option>
-                    <option value="dout">DOUT</option>
-                    <option value="opi" selected>OPI</option>
-                </select>
-            </label>
-            
-            <label>Flash Frequency:
-                <select id="flashFreq">
-                    <option value="80m">80 MHz</option>
-                    <option value="40m">40 MHz</option>
-                    <option value="26m">26 MHz</option>
-                    <option value="20m">20 MHz</option>
-                </select>
-            </label>
-            
-            <label>Flash Size:
-                <select id="flashSize">
-                    <option value="1MB">1MB</option>
-                    <option value="2MB">2MB</option>
-                    <option value="4MB" selected>4MB</option>
-                    <option value="8MB">8MB</option>
-                    <option value="16MB">16MB</option>
-                </select>
-            </label>
-        </div>
-        
-        <div id="status" class="info">
-            Connect your ESP32-S3 in download mode (hold BOOT, press RESET, release BOOT)
-        </div>
-    </div>
+    <!-- (Keep your existing HTML structure) -->
 
-    <!-- Load esptool-js from CDN -->
-    <script src="https://unpkg.com/esptool-js@latest/dist/esptool.js"></script>
+    <!-- We'll include the esptool-js files directly -->
+    <script src="https://app.unpkg.com/esptool-js@0.5.4/files/lib/util.js"></script>
+    <script src="https://app.unpkg.com/esptool-js@0.5.4/files/lib/webserial.js"></script>
+    <script src="https://app.unpkg.com/esptool-js@0.5.4/files/lib/reset.js"></script>
+    <script src="https://app.unpkg.com/esptool-js@0.5.4/files/lib/stubFlasher.js"></script>
+    <script src="https://app.unpkg.com/esptool-js@0.5.4/files/lib/esploader.js"></script>
     
     <script>
-        const fileInput = document.getElementById('fileInput');
-        const connectButton = document.getElementById('connectButton');
-        const flashButton = document.getElementById('flashButton');
-        const progressContainer = document.getElementById('progressContainer');
-        const progressBar = document.getElementById('progressBar');
-        const statusDiv = document.getElementById('status');
-        
-        const flashMode = document.getElementById('flashMode');
-        const flashFreq = document.getElementById('flashFreq');
-        const flashSize = document.getElementById('flashSize');
-        
-        let port = null;
-        let file = null;
-        let esploader = null;
-        
-        // Connect to ESP32-S3
+        // Modified connect function using local files
         connectButton.addEventListener('click', async () => {
             if (!navigator.serial) {
                 showError('Web Serial API not supported. Use Chrome/Edge 89+ or Firefox 101+');
@@ -152,8 +35,8 @@
                 
                 statusDiv.textContent += '\nPort opened. Connecting to ESP32-S3...';
                 
-                // Initialize esptool-js
-                esploader = new esptool.ESPLoader(port, {
+                // Initialize using local esptool-js
+                esploader = new ESPLoader(port, {
                     debug: true,
                     logFunction: (message) => {
                         statusDiv.textContent += '\n' + message;
@@ -174,69 +57,13 @@
                 
             } catch (error) {
                 showError(error.message);
-                if (port) await port.close();
+                if (port) {
+                    try { await port.close(); } catch(e) {}
+                }
             }
         });
-        
-        // Handle file selection
-        fileInput.addEventListener('change', (e) => {
-            file = e.target.files[0];
-            if (file) {
-                statusDiv.className = 'info';
-                statusDiv.textContent += `\nSelected file: ${file.name} (${formatFileSize(file.size)})`;
-            }
-        });
-        
-        // Flash the firmware
-        flashButton.addEventListener('click', async () => {
-            if (!file || !esploader) return;
-            
-            try {
-                flashButton.disabled = true;
-                progressContainer.style.display = 'block';
-                
-                statusDiv.className = 'info';
-                statusDiv.textContent += '\nStarting flash process...';
-                
-                const fileBuffer = await file.arrayBuffer();
-                const options = {
-                    fileArray: [new Uint8Array(fileBuffer)],
-                    flashSize: flashSize.value,
-                    flashMode: flashMode.value,
-                    flashFreq: flashFreq.value,
-                    eraseAll: true,
-                    compress: file.name.endsWith('.gz'),
-                    reportProgress: (progress) => {
-                        const percent = Math.round(progress * 100);
-                        progressBar.style.width = `${percent}%`;
-                        progressBar.textContent = `${percent}%`;
-                    }
-                };
-                
-                await esploader.writeFlash(options);
-                
-                statusDiv.className = 'success';
-                statusDiv.textContent += '\nFlash complete! You can now reset your device.';
-                
-            } catch (error) {
-                showError(error.message);
-            } finally {
-                flashButton.disabled = false;
-                if (port) await port.close();
-            }
-        });
-        
-        function showError(message) {
-            statusDiv.className = 'error';
-            statusDiv.textContent += '\nERROR: ' + message;
-            console.error(message);
-        }
-        
-        function formatFileSize(bytes) {
-            if (bytes < 1024) return bytes + ' bytes';
-            else if (bytes < 1048576) return (bytes / 1024).toFixed(2) + ' KB';
-            else return (bytes / 1048576).toFixed(2) + ' MB';
-        }
+
+        // (Keep the rest of your existing JavaScript)
     </script>
 </body>
 </html>
