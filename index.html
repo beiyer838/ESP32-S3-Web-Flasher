@@ -1,110 +1,30 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ESP32-S3 Web Flasher</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      padding: 40px;
-      background-color: #f5f5f5;
-    }
-    h1 {
-      color: #333;
-    }
-    #progressContainer {
-      width: 80%;
-      background: #ddd;
-      margin: 20px auto;
-      height: 30px;
-      border-radius: 5px;
-      overflow: hidden;
-      display: none;
-    }
-    #progressBar {
-      height: 100%;
-      width: 0%;
-      background-color: #4caf50;
-      text-align: center;
-      line-height: 30px;
-      color: white;
-      transition: width 0.3s;
-    }
-    input[type=file] {
-      margin: 20px;
-    }
-    button {
-      padding: 15px 30px;
-      font-size: 18px;
-      background-color: #2196f3;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #0b7dda;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP32-S3 Web Flasher</title>
 </head>
 <body>
+    <h1>ESP32-S3 Web Flasher</h1>
+    <button id="connectButton">Connect to Device</button>
 
-  <h1>ESP32-S3 Web Flasher</h1>
-  <input type="file" id="fileInput" accept=".bin">
-  <br>
-  <button id="flashButton">Flash Selected .bin</button>
+    <script src="web/index-a6a0db5c.js"></script>
+    <script src="web/connect-2f67c09e.js"></script>
+    <script src="web/esp32s3-8c1766c2.js"></script>
 
-  <div id="progressContainer">
-    <div id="progressBar">0%</div>
-  </div>
-
-  <script type="module">
-    import { connect, flashFromFileWithProgress } from "https://unpkg.com/esp-web-tools@9.1.0/dist/web/index.js";
-
-    let selectedFile;
-
-    document.addEventListener('DOMContentLoaded', function() {
-      const fileInput = document.getElementById('fileInput');
-      const flashButton = document.getElementById('flashButton');
-      const progressContainer = document.getElementById('progressContainer');
-      const progressBar = document.getElementById('progressBar');
-
-      fileInput.addEventListener('change', (event) => {
-        selectedFile = event.target.files[0];
-      });
-
-      flashButton.addEventListener('click', async () => {
-        if (!selectedFile) {
-          alert("Please select a .bin file first!");
-          return;
-        }
-
-        try {
-          const port = await connect();
-          progressContainer.style.display = 'block';
-
-          await flashFromFileWithProgress(port, selectedFile, 0x0, (percentage) => {
-            progressBar.style.width = percentage + '%';
-            progressBar.innerText = Math.floor(percentage) + '%';
-          });
-
-          alert("Flashing completed successfully!");
-          progressContainer.style.display = 'none';
-          progressBar.style.width = '0%';
-          progressBar.innerText = '0%';
-
-        } catch (err) {
-          console.error(err);
-          alert("Flashing failed: " + err.message);
-          progressContainer.style.display = 'none';
-          progressBar.style.width = '0%';
-          progressBar.innerText = '0%';
-        }
-      });
-    });
-  </script>
-
+    <script>
+        // Initialize the flashing process once connected
+        document.getElementById('connectButton').addEventListener('click', function() {
+            connect({ 
+                chipFamily: 'ESP32-S3',
+                flashData: {
+                    // Path to the .bin file
+                    file: 'firmware.bin',
+                    offset: 0
+                }
+            });
+        });
+    </script>
 </body>
 </html>
